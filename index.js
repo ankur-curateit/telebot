@@ -292,18 +292,42 @@ bot.on("message", async (msg) => {
     instructions:
       "Please address the user as Ankur Sarkar. The user has a premium account.",
   });
+  console.log("run : ", run);
 
   // Step 5: Retrieve the Assistant's response
   const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-  console.log("runStatus : ", runStatus);
+  console.log("runStatus : ", runStatus.status);
 
   // Assuming the response is in the last message of the thread
   const messages = await openai.beta.threads.messages.list(thread.id);
   console.log("messages : ", messages);
-  const lastMessage = messages.data[messages.data.length - 1];
-  console.log("lastMessage : ", lastMessage);
-  const response = lastMessage.content[0].text.value;
-  console.log("response : ", response);
+
+  // Filter out messages where the role is 'assistant'
+  const assistantMessages = messages.data.filter(
+    (message) => message.role === "assistant"
+  );
+  let response = "";
+  // If you want to use the last assistant message
+  if (assistantMessages.length > 0) {
+    const lastAssistantMessage =
+      assistantMessages[assistantMessages.length - 1];
+    console.log("Last Assistant Message: ", lastAssistantMessage);
+    console.log(
+      "Assistant content: ",
+      lastAssistantMessage.content[0].text.value
+    );
+
+    // Assuming the content is an array and the text value is in the first element
+    response = lastAssistantMessage.content[0].text.value || "Try Again";
+    console.log("Response: ", response);
+
+    // Send the response back to the user
+  } else {
+    console.log("No assistant messages found.");
+    response = "Try Again";
+    // Handle the case where no assistant messages are found
+    // For example, send a default message or a prompt to the user
+  }
 
   // Send the response back to the user
   bot.sendMessage(chatId, response);
