@@ -322,9 +322,9 @@ bot.on("message", async (msg) => {
   */
   const assistant = await openai.beta.assistants.retrieve(
     // with func call
-    // "asst_Bcv6YNCSOw8M7IHQZAVQSyAG"
+    "asst_Bcv6YNCSOw8M7IHQZAVQSyAG"
     // without func call
-    "asst_YMVjYfRZOsz6XQoEZzw5ESOe"
+    // "asst_YMVjYfRZOsz6XQoEZzw5ESOe"
   );
   // console.log("assistant : ", assistant);
 
@@ -351,36 +351,39 @@ bot.on("message", async (msg) => {
     assistant_id: assistant.id,
     instructions: `Please address the user as ${currUsername}. You are CurateitAI, a productivity assistant and your job is to help users with their productivity.`,
   });
-  console.log("run : ", run);
-
   let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
 
-  while (runStatus.status !== "completed") {
+  while (
+    runStatus.status !== "completed" &&
+    runStatus.status !== "requires_action"
+  ) {
     await new Promise((resolve) => setTimeout(resolve, 500));
     runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
   }
+  console.log("runStatus : ", runStatus);
+  if (runStatus.status === "completed") {
+    const messages = await openai.beta.threads.messages.list(threadId);
+    console.log("messages : ", messages);
 
-  // const toolsToCall =
-  //   runStatus?.required_action?.submit_tool_outputs?.tool_calls;
-  // console.log("toolsToCall : ", toolsToCall);
+    const assistantMessages = messages.data.filter(
+      (message) => message.role === "assistant"
+    );
+    console.log("assistantMessages : ", assistantMessages);
+    let response = "";
 
-  const messages = await openai.beta.threads.messages.list(threadId);
-  console.log("messages : ", messages);
+    if (assistantMessages.length > 0) {
+      const lastAssistantMessage = assistantMessages[0];
 
-  const assistantMessages = messages.data.filter(
-    (message) => message.role === "assistant"
-  );
-  console.log("assistantMessages : ", assistantMessages);
-  let response = "";
-
-  if (assistantMessages.length > 0) {
-    const lastAssistantMessage = assistantMessages[0];
-
-    response = lastAssistantMessage.content[0].text.value || "Try Again";
-  } else {
-    console.log("No assistant messages found.");
-    response = "Try Again";
+      response = lastAssistantMessage.content[0].text.value || "Try Again";
+    } else {
+      console.log("No assistant messages found.");
+      response = "Try Again";
+    }
+    console.log("response : ", response);
+    bot.sendMessage(chatId, response);
+  } else if (runStatus.status === "requires_action") {
+    const toolsToCall =
+      runStatus?.required_action?.submit_tool_outputs?.tool_calls;
+    console.log("toolsToCall : ", toolsToCall);
   }
-  console.log("response : ", response);
-  bot.sendMessage(chatId, response);
 });
