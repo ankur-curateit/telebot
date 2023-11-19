@@ -96,6 +96,7 @@ const searchGem = async (chatId, query) => {
         chatId,
         `Found a Gem called ${res.title}, url : ${res.url}`
       );
+      return res;
     } else {
       console.log("No gem found.");
       bot.sendMessage(chatId, "No Gem Found");
@@ -128,7 +129,7 @@ const saveLink = async (chatId, link) => {
   const authToken = sessionToken;
   if (!authToken || authToken == 0) {
     bot.sendMessage(chatId, "Invalid User, Please relogin");
-    return;
+    return "nulluser";
   }
   console.log("authToken from saveLink : ", authToken);
   const body = {
@@ -175,9 +176,11 @@ const saveLink = async (chatId, link) => {
     const responseData = await response.json();
     console.log("Successfully saved link:", link);
     bot.sendMessage(chatId, "Successfully saved the link");
+    return "success";
   } catch (error) {
     bot.sendMessage(chatId, "Could not save the link, please try again");
     console.error("Error saving link:", error);
+    return "failed";
   }
 };
 
@@ -360,7 +363,9 @@ bot.on("message", async (msg) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
   }
+
   console.log("runStatus : ", runStatus);
+
   if (runStatus.status === "completed") {
     const messages = await openai.beta.threads.messages.list(threadId);
     console.log("messages : ", messages);
@@ -385,5 +390,47 @@ bot.on("message", async (msg) => {
     const toolsToCall =
       runStatus?.required_action?.submit_tool_outputs?.tool_calls;
     console.log("toolsToCall : ", toolsToCall);
+    let toolsOutput = [];
+
+    for (const action of toolsToCall) {
+      const funcName = action.function.name;
+      const functionArguments = JSON.parse(action.function.arguments);
+
+      if (funcName === "saveLink") {
+        const result = await saveLink(chatId, functionArguments.link);
+        let output = "Error in saving link";
+        if (result === "nulluser") {
+          output = "User not logged in";
+        }
+        if (result === "success") {
+          output = "Link Saved";
+        }
+        if (result === "failed") {
+          output = "Failed to save, try again";
+        }
+        console.log("output : ", output);
+        toolsOutput.push({
+          tool_call_id: action.id,
+          output: output,
+        });
+      }
+      if (funcName === "searchGem") {
+        const result = await searchGem(chatId, functionArguments.query);
+        let output = "Error in searching gem";
+        if (result) {
+          output = `Found a Gem called ${result.title}, url : ${result.url}`;
+        }
+        console.log("output : ", output);
+        toolsOutput.push({
+          tool_call_id: action.id,
+          output: output,
+        });
+      }
+    }
+
+    // Submit the tool outputs to Assistant API
+    await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+      tool_outputs: toolsOutput,
+    });
   }
 });
