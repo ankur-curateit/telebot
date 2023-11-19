@@ -275,8 +275,56 @@ bot.on("message", async (msg) => {
     model: "gpt-4-1106-preview", // Or any other model you prefer
   }); 
   */
+  // -------------------
+  /*
+  const assistant = await openai.beta.assistants.create({
+    name: "CurateitAI",
+    instructions:
+      "You are CurateitAI, a productivity assistant and your job is to help users with their productivity.",
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "saveLink",
+          description: "Save or add the given Link into Database",
+          parameters: {
+            type: "object",
+            properties: {
+              link: {
+                type: "string",
+                description: "The url to be stored",
+              },
+            },
+            required: ["link"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "searchGem",
+          description: "Searches for an Item from Database",
+          parameters: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "The term to search for",
+              },
+            },
+            required: ["query"],
+          },
+        },
+      },
+    ], // Add other tools if needed
+    model: "gpt-4-1106-preview", // Or any other model you prefer
+  });
+  */
   const assistant = await openai.beta.assistants.retrieve(
-    "asst_BHQa6B1vZF7ZhoJXOKwLteAG"
+    // with func call
+    // "asst_Bcv6YNCSOw8M7IHQZAVQSyAG"
+    // without func call
+    "asst_YMVjYfRZOsz6XQoEZzw5ESOe"
   );
   // console.log("assistant : ", assistant);
 
@@ -311,6 +359,10 @@ bot.on("message", async (msg) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
   }
+
+  // const toolsToCall =
+  //   runStatus?.required_action?.submit_tool_outputs?.tool_calls;
+  // console.log("toolsToCall : ", toolsToCall);
 
   const messages = await openai.beta.threads.messages.list(threadId);
   console.log("messages : ", messages);
