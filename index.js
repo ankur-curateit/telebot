@@ -12,6 +12,7 @@ const openai = new OpenAI({
 const token = process.env.TELEGRAM_TOKEN;
 
 const bot = new TelegramBot(token, { polling: true });
+const chatThreads = new Map();
 
 let loginState = {};
 let apiResponse = {};
@@ -239,6 +240,9 @@ const systemMessage = {
 
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(msg.chat.id, "Welcome To CurateitAI");
+  const chatId = msg.chat.id;
+  loginState[chatId] = { step: "email" };
+  bot.sendMessage(chatId, "Please enter your email");
 });
 
 // OpenAI Integration
@@ -274,40 +278,50 @@ bot.on("message", async (msg) => {
   );
   // console.log("assistant : ", assistant);
 
-  const thread = await openai.beta.threads.create();
-  // console.log("thread : ", thread);
+  // Check if a thread already exists for this chat
+  let threadId = chatThreads.get(chatId);
 
-  const message = await openai.beta.threads.messages.create(thread.id, {
+  if (!threadId) {
+    // Create a new thread if it doesn't exist
+    const thread = await openai.beta.threads.create();
+    threadId = thread.id;
+    chatThreads.set(chatId, threadId); // Store the new thread ID
+  }
+
+  console.log("threadId : ", threadId);
+
+  const message = await openai.beta.threads.messages.create(threadId, {
     role: "user",
     content: text,
   });
-  // console.log("message : ", message);
+  console.log("message : ", message);
 
   // make username dynamic
-  const run = await openai.beta.threads.runs.create(thread.id, {
+  const run = await openai.beta.threads.runs.create(threadId, {
     assistant_id: assistant.id,
     instructions:
       "Please address the user as Ankur Sarkar. You are CurateitAI, a productivity assistant and your job is to help users with their productivity.",
   });
 
-  let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+  let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
 
   while (runStatus.status !== "completed") {
     await new Promise((resolve) => setTimeout(resolve, 500));
-    runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
   }
 
-  const messages = await openai.beta.threads.messages.list(thread.id);
-  // console.log("messages : ", messages);
+  const messages = await openai.beta.threads.messages.list(threadId);
+  console.log("messages : ", messages);
 
   const assistantMessages = messages.data.filter(
     (message) => message.role === "assistant"
   );
+  console.log("assistantMessages : ", assistantMessages);
   let response = "";
 
   if (assistantMessages.length > 0) {
     const lastAssistantMessage =
-      assistantMessages[assistantMessages.length - 1];
+      assistantMessages[0];
 
     response = lastAssistantMessage.content[0].text.value || "Try Again";
   } else {
