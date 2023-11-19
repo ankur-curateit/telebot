@@ -260,13 +260,18 @@ bot.on("message", async (msg) => {
   console.log(`${chatId} <==> ${text}`);
 
   // Step 1: Create an Assistant (if not already created)
+  /*
   const assistant = await openai.beta.assistants.create({
     name: "CurateitAI",
     instructions:
       "You are CurateitAI, a productivity assistant and your job is to help users with their productivity.",
     tools: [{ type: "code_interpreter" }], // Add other tools if needed
     model: "gpt-4-1106-preview", // Or any other model you prefer
-  });
+  }); 
+  */
+  const assistant = await openai.beta.assistants.retrieve(
+    "asst_BHQa6B1vZF7ZhoJXOKwLteAG"
+  );
   console.log("assistant : ", assistant);
 
   // Step 2: Create a Thread
