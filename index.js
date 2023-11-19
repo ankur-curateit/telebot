@@ -272,70 +272,48 @@ bot.on("message", async (msg) => {
   const assistant = await openai.beta.assistants.retrieve(
     "asst_BHQa6B1vZF7ZhoJXOKwLteAG"
   );
-  console.log("assistant : ", assistant);
+  // console.log("assistant : ", assistant);
 
-  // Step 2: Create a Thread
   const thread = await openai.beta.threads.create();
-  console.log("thread : ", thread);
+  // console.log("thread : ", thread);
 
-  // Step 3: Add the received message to the Thread
   const message = await openai.beta.threads.messages.create(thread.id, {
     role: "user",
     content: text,
   });
-  console.log("message : ", message);
+  // console.log("message : ", message);
 
-  // Step 4: Run the Assistant on the Thread
   // make username dynamic
   const run = await openai.beta.threads.runs.create(thread.id, {
     assistant_id: assistant.id,
     instructions:
       "Please address the user as Ankur Sarkar. You are CurateitAI, a productivity assistant and your job is to help users with their productivity.",
   });
-  console.log("run : ", run);
 
-  // Step 5: Retrieve the Assistant's response
   let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-  console.log("runStatus : ", runStatus.status);
 
-  // Loop to check if the runStatus is 'completed'
   while (runStatus.status !== "completed") {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for 5 seconds before checking again
+    await new Promise((resolve) => setTimeout(resolve, 500));
     runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-    console.log("Checking runStatus again: ", runStatus.status);
   }
 
-  // Assuming the response is in the last message of the thread
   const messages = await openai.beta.threads.messages.list(thread.id);
-  console.log("messages : ", messages);
+  // console.log("messages : ", messages);
 
-  // Filter out messages where the role is 'assistant'
   const assistantMessages = messages.data.filter(
     (message) => message.role === "assistant"
   );
   let response = "";
-  // If you want to use the last assistant message
+
   if (assistantMessages.length > 0) {
     const lastAssistantMessage =
       assistantMessages[assistantMessages.length - 1];
-    console.log("Last Assistant Message: ", lastAssistantMessage);
-    console.log(
-      "Assistant content: ",
-      lastAssistantMessage.content[0].text.value
-    );
 
-    // Assuming the content is an array and the text value is in the first element
     response = lastAssistantMessage.content[0].text.value || "Try Again";
-    console.log("Response: ", response);
-
-    // Send the response back to the user
   } else {
     console.log("No assistant messages found.");
     response = "Try Again";
-    // Handle the case where no assistant messages are found
-    // For example, send a default message or a prompt to the user
   }
-
-  // Send the response back to the user
+  console.log("response : ", response);
   bot.sendMessage(chatId, response);
 });
