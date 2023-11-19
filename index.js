@@ -13,6 +13,7 @@ const token = process.env.TELEGRAM_TOKEN;
 
 const bot = new TelegramBot(token, { polling: true });
 const chatThreads = new Map();
+let currUsername = "User";
 
 let loginState = {};
 let apiResponse = {};
@@ -183,7 +184,7 @@ const saveLink = async (chatId, link) => {
 bot.onText(/\/login/, (msg) => {
   const chatId = msg.chat.id;
   loginState[chatId] = { step: "email" };
-  bot.sendMessage(chatId, "Please enter your email");
+  bot.sendMessage(chatId, "Please enter your email to login");
 });
 
 // Handles Login
@@ -216,6 +217,7 @@ bot.on("message", async (msg) => {
       apiResponse[chatId] = response.data; // Store the API response
       sessionToken = response.data.jwt;
       sessionId = response.data.user.id;
+      currUsername = response.data.user.username;
       console.log("sessionId : ", sessionId);
       console.log("sessionToken : ", sessionToken);
       bot.sendMessage(chatId, "Login Successful");
@@ -242,7 +244,7 @@ bot.onText(/\/start/, (msg) => {
   bot.sendMessage(msg.chat.id, "Welcome To CurateitAI");
   const chatId = msg.chat.id;
   loginState[chatId] = { step: "email" };
-  bot.sendMessage(chatId, "Please enter your email");
+  bot.sendMessage(chatId, "Please enter your email to login");
 });
 
 // OpenAI Integration
@@ -299,9 +301,9 @@ bot.on("message", async (msg) => {
   // make username dynamic
   const run = await openai.beta.threads.runs.create(threadId, {
     assistant_id: assistant.id,
-    instructions:
-      "Please address the user as Ankur Sarkar. You are CurateitAI, a productivity assistant and your job is to help users with their productivity.",
+    instructions: `Please address the user as ${currUsername}. You are CurateitAI, a productivity assistant and your job is to help users with their productivity.`,
   });
+  console.log("run : ", run);
 
   let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
 
@@ -320,8 +322,7 @@ bot.on("message", async (msg) => {
   let response = "";
 
   if (assistantMessages.length > 0) {
-    const lastAssistantMessage =
-      assistantMessages[0];
+    const lastAssistantMessage = assistantMessages[0];
 
     response = lastAssistantMessage.content[0].text.value || "Try Again";
   } else {
