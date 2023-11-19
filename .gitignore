@@ -118,3 +118,4 @@ build.zip
 api/
 aiFlashcards/
 node_modules/
+test.js

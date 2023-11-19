@@ -242,12 +242,13 @@ bot.onText(/\/start/, (msg) => {
 });
 
 // OpenAI Integration
-bot.on("message", (msg) => {
+bot.on("message", async (msg) => {
+  // Openai Handler
   const chatId = msg.chat.id;
   console.log("Inside openai Handler");
+
   // If the user is in the process of logging in, do not proceed.
   if (loginState[chatId]) {
-    console.log("loginState : ", loginState);
     return;
   }
 
@@ -257,5 +258,48 @@ bot.on("message", (msg) => {
 
   const text = msg.text;
   console.log(`${chatId} <==> ${text}`);
-  bot.sendMessage(chatId, "Received your message");
+
+  // Step 1: Create an Assistant (if not already created)
+  const assistant = await openai.beta.assistants.create({
+    name: "CurateitAI",
+    instructions:
+      "You are CurateitAI, a productivity assistant and your job is to help users with their productivity.",
+    tools: [{ type: "code_interpreter" }], // Add other tools if needed
+    model: "gpt-4-1106-preview", // Or any other model you prefer
+  });
+  console.log("assistant : ", assistant);
+
+  // Step 2: Create a Thread
+  const thread = await openai.beta.threads.create();
+  console.log("thread : ", thread);
+
+  // Step 3: Add the received message to the Thread
+  const message = await openai.beta.threads.messages.create(thread.id, {
+    role: "user",
+    content: text,
+  });
+  console.log("message : ", message);
+
+  // Step 4: Run the Assistant on the Thread
+  // make username dynamic
+  const run = await openai.beta.threads.runs.create(thread.id, {
+    assistant_id: assistant.id,
+    instructions:
+      "Please address the user as Ankur Sarkar. The user has a premium account.",
+  });
+
+  // Step 5: Retrieve the Assistant's response
+  const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+  console.log("runStatus : ", runStatus);
+
+  // Assuming the response is in the last message of the thread
+  const messages = await openai.beta.threads.messages.list(thread.id);
+  console.log("messages : ", messages);
+  const lastMessage = messages.data[messages.data.length - 1];
+  console.log("lastMessage : ", lastMessage);
+  const response = lastMessage.content[0].text.value;
+  console.log("response : ", response);
+
+  // Send the response back to the user
+  bot.sendMessage(chatId, response);
 });
