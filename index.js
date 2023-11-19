@@ -295,8 +295,15 @@ bot.on("message", async (msg) => {
   console.log("run : ", run);
 
   // Step 5: Retrieve the Assistant's response
-  const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+  let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
   console.log("runStatus : ", runStatus.status);
+
+  // Loop to check if the runStatus is 'completed'
+  while (runStatus.status !== "completed") {
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for 5 seconds before checking again
+    runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    console.log("Checking runStatus again: ", runStatus.status);
+  }
 
   // Assuming the response is in the last message of the thread
   const messages = await openai.beta.threads.messages.list(thread.id);
