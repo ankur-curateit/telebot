@@ -290,7 +290,7 @@ bot.on("message", async (msg) => {
   const run = await openai.beta.threads.runs.create(thread.id, {
     assistant_id: assistant.id,
     instructions:
-      "Please address the user as Ankur Sarkar. The user has a premium account.",
+      "Please address the user as Ankur Sarkar. You are CurateitAI, a productivity assistant and your job is to help users with their productivity.",
   });
   console.log("run : ", run);
 
