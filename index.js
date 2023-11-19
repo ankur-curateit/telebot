@@ -33,7 +33,7 @@ async function fetchOpenGraphData(url) {
   metaTags.forEach((tag) => {
     ogData[tag.getAttribute("property")] = tag.getAttribute("content");
   });
-
+  console.log("ogData from fetchogdata : ", ogData);
   return ogData;
 }
 
@@ -85,9 +85,7 @@ const searchGem = async (chatId, query) => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
-    console.log("data : ", data);
     if (data && data.totalCount > 0) {
-      console.log("Full Title :", data?.finalRes[0]?.title);
       const res = {
         title: data?.finalRes[0]?.title,
         url: data?.finalRes[0]?.url,
@@ -117,7 +115,7 @@ const saveLink = async (chatId, link) => {
     return;
   }
   let ogData = await fetchOpenGraphData(link);
-
+  console.log("ogData : ", ogData);
   let title = ogData["og:title"];
   let desc = ogData["og:description"];
   let url = link;
@@ -341,13 +339,10 @@ bot.on("message", async (msg) => {
     chatThreads.set(chatId, threadId); // Store the new thread ID
   }
 
-  console.log("threadId : ", threadId);
-
   const message = await openai.beta.threads.messages.create(threadId, {
     role: "user",
     content: text,
   });
-  console.log("message : ", message);
 
   // make username dynamic
   const run = await openai.beta.threads.runs.create(threadId, {
@@ -364,16 +359,12 @@ bot.on("message", async (msg) => {
     runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
   }
 
-  console.log("runStatus : ", runStatus);
-
   if (runStatus.status === "completed") {
     const messages = await openai.beta.threads.messages.list(threadId);
-    console.log("messages : ", messages);
 
     const assistantMessages = messages.data.filter(
       (message) => message.role === "assistant"
     );
-    console.log("assistantMessages : ", assistantMessages);
     let response = "";
 
     if (assistantMessages.length > 0) {
@@ -381,7 +372,6 @@ bot.on("message", async (msg) => {
 
       response = lastAssistantMessage.content[0].text.value || "Try Again";
     } else {
-      console.log("No assistant messages found.");
       response = "Try Again";
     }
     console.log("response : ", response);
@@ -389,7 +379,6 @@ bot.on("message", async (msg) => {
   } else if (runStatus.status === "requires_action") {
     const toolsToCall =
       runStatus?.required_action?.submit_tool_outputs?.tool_calls;
-    console.log("toolsToCall : ", toolsToCall);
     let toolsOutput = [];
 
     for (const action of toolsToCall) {
