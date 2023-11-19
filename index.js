@@ -185,8 +185,8 @@ bot.onText(/\/login/, (msg) => {
   bot.sendMessage(chatId, "Please enter your email");
 });
 
+// Handles Login
 bot.on("message", async (msg) => {
-  // Handles Login
   const chatId = msg.chat.id;
   // if (!sessionToken || sessionToken == 0) {
   //   bot.sendMessage(chatId, "Invalid User, Please relogin");
@@ -241,10 +241,21 @@ bot.onText(/\/start/, (msg) => {
   bot.sendMessage(msg.chat.id, "Welcome To CurateitAI");
 });
 
+// OpenAI Integration
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
+  console.log("Inside openai Handler");
+  // If the user is in the process of logging in, do not proceed.
+  if (loginState[chatId]) {
+    console.log("loginState : ", loginState);
+    return;
+  }
+
   if (msg.text === "/start" || msg.text === "/login") {
     return;
   }
+
+  const text = msg.text;
+  console.log(`${chatId} <==> ${text}`);
   bot.sendMessage(chatId, "Received your message");
 });
