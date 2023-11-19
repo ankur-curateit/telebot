@@ -117,3 +117,4 @@ src-bak
 build.zip
 api/
 aiFlashcards/
+node_modules/
